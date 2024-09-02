@@ -140,8 +140,9 @@ input[type="range"]::-moz-range-thumb {
 .chart-container {
     margin-top: 30px;
     border-radius: 8px;
-    padding: 20px;
+    padding: 5%;
     transition: background-color 0.3s;
+    
 }
 .light-theme .chart-container {
     background-color: var(--light-bg);
