@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calcul Capital Final - Fox Velocity Création</title>
+    <link rel="stylesheet" href="styles-css.css">
+</head>
+<body>
+    <header class="banner">
+        <div class="banner-content">
+            <h1 class="banner-text">Fox Velocity Création</h1>
+            <img src="Images/logo%20Renard%20avec%20blanc.png" alt="Logo Renard" class="banner-logo">
+        </div>
+        <button id="theme-toggle">Changer de thème</button>
+    </header>
+
+    <main class="container">
+        <h1>Simulateur Epargne</h1>
+
+        <div class="input-group">
+            <label for="initialAmount">Montant initial (€)</label>
+            <input type="range" id="initialAmount" min="0" max="100000" step="100" value="10000">
+            <span id="initialAmountValue" class="range-value">10 000 €</span>
+        </div>
+
+        <div class="input-group">
+            <label for="monthlyContribution">Versement mensuel initial (€)</label>
+            <input type="range" id="monthlyContribution" min="0" max="1000" step="10" value="200">
+            <span id="monthlyContributionValue" class="range-value">200 €</span>
+        </div>
+
+        <div class="input-group">
+            <label for="annualInterestRate">Taux d'intérêt annuel (%)</label>
+            <input type="range" id="annualInterestRate" min="0" max="10" step="0.1" value="3">
+            <span id="annualInterestRateValue" class="range-value">3.0 %</span>
+        </div>
+
+        <div class="input-group">
+            <label for="years">Durée</label>
+            <input type="range" id="years" min="1" max="30" step="1" value="8">
+            <span id="yearsValue" class="range-value">8 ans</span>
+        </div>
+
+        <div class="fees-group">
+            <div class="fees-input">
+                <label for="initialEntryFees">Frais d'entrée initial (%)</label>
+                <input type="range" id="initialEntryFees" min="0" max="5" step="0.1" value="1">
+                <span id="initialEntryFeesValue" class="range-value">1.0 %</span>
+            </div>
+
+            <div class="fees-input">
+                <label for="monthlyEntryFees">Frais d'entrée mensuel (%)</label>
+                <input type="range" id="monthlyEntryFees" min="0" max="5" step="0.1" value="0.5">
+                <span id="monthlyEntryFeesValue" class="range-value">0.5 %</span>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label for="managementFees">Frais de gestion annuels (%)</label>
+            <input type="range" id="managementFees" min="0" max="2" step="0.1" value="0.5">
+            <span id="managementFeesValue" class="range-value">0.5 %</span>
+        </div>
+
+        <div class="input-group">
+            <label for="indexationRate">Taux d'indexation annuel des versements (%)</label>
+            <input type="range" id="indexationRate" min="0" max="5" step="0.1" value="1">
+            <span id="indexationRateValue" class="range-value">1.0 %</span>
+        </div>
+
+        <div id="result">
+            <h2>Résultats de la projection</h2>
+            <p class="result-item">Montant final : <span id="finalAmount"></span></p>
+            <p class="result-item">Total des versements : <span id="totalContributions"></span></p>
+            <p class="result-item">Intérêts gagnés : <span id="interestEarned"></span></p>
+            <p class="result-item">Total des frais d'entrée initial : <span id="totalInitialEntryFees"></span></p>
+            <p class="result-item">Total des frais d'entrée mensuels : <span id="totalMonthlyEntryFees"></span></p>
+            <p class="result-item">Total des frais de gestion : <span id="totalManagementFees"></span></p>
+            <p class="result-item">Dernier versement mensuel : <span id="lastMonthlyContribution"></span></p>
+        </div>
+
+        <div class="chart-container" id="chartContainer1"></div>
+        <div class="chart-container" id="chartContainer2"></div>
+    </main>
+
+    <script src="script-js.js"></script>
+</body>
+</html>
