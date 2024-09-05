@@ -80,25 +80,23 @@
   </div>
 
   <script>
-    // Initialisation de l'objet QRCodeStyling
     let qrCodeStyling = new QRCodeStyling({
       width: 300,
       height: 300,
       margin: 10,
       dotsOptions: {
-        color: "#000000",  // Couleur des points par défaut
-        type: "square"     // Forme des points par défaut
+        color: "#000000",
+        type: "square"
       },
       backgroundOptions: {
-        color: "#ffffff"   // Couleur de fond par défaut
+        color: "#ffffff"
       },
       cornersSquareOptions: {
-        type: "square"     // Forme des repères par défaut
+        type: "square"
       }
     });
 
     function generateQRCode(qrContent, qrColor, qrBgColor, qrDotShape, qrCornerShape, logo, size) {
-      // Vérification si le code hexadécimal est valide
       const isValidHex = (hex) => /^#([0-9A-F]{3}){1,2}$/i.test(hex);
 
       if (!isValidHex(qrColor)) {
@@ -111,39 +109,34 @@
         return;
       }
 
-      // Mise à jour de la taille du QR code
       const qrSize = parseInt(size);
 
-      // Configuration des options QR Code
       qrCodeStyling.update({
         data: qrContent,
-        width: qrSize,  // Taille personnalisée
-        height: qrSize, // Taille personnalisée
+        width: qrSize,
+        height: qrSize,
         dotsOptions: {
-          color: qrColor,  // Couleur personnalisée
-          type: qrDotShape   // Forme personnalisée des points
+          color: qrColor,
+          type: qrDotShape
         },
         backgroundOptions: {
-          color: qrBgColor  // Couleur de fond personnalisée
+          color: qrBgColor
         },
         cornersSquareOptions: {
-          type: qrCornerShape  // Personnalisation des repères
+          type: qrCornerShape
         },
-        image: logo ? URL.createObjectURL(logo) : '',  // Logo optionnel
+        image: logo ? URL.createObjectURL(logo) : '',
         imageOptions: {
-          crossOrigin: 'anonymous',  // Important pour éviter des problèmes CORS
-          margin: 5,                 // Marge autour du logo
-          hideBackgroundDots: false, // Pour que le logo ne cache pas les points
-          imageSize: 0.30           // Taille du logo par rapport au QR code
+          crossOrigin: 'anonymous',
+          margin: 5,
+          hideBackgroundDots: false,
+          imageSize: 0.25
         }
       });
 
-      // Affichage du code QR
       const qrCodeElement = document.getElementById('qr-code');
       qrCodeElement.innerHTML = '';
       qrCodeStyling.append(qrCodeElement);
-
-      // Afficher le bouton de téléchargement
       document.getElementById('download-btn').classList.remove('hidden');
     }
 
@@ -159,7 +152,6 @@
       if (vcfFile) {
         const reader = new FileReader();
         reader.onload = () => {
-          // Extraire les informations du fichier VCF
           const vcfData = reader.result.split('\n');
           const vcfFields = {};
 
@@ -170,11 +162,16 @@
             }
           });
 
-          // Générer le contenu du code QR
+          const firstName = vcfFields.N ? vcfFields.N.split(';')[1] : 'Nom';
+          const lastName = vcfFields.N ? vcfFields.N.split(';')[0] : 'Prenom';
+          const fileName = `${firstName}${lastName}FoxVelocityCreator`;
+
           const qrContent = `BEGIN:VCARD\nVERSION:3.0\n${Object.entries(vcfFields).map(([key, value]) => `${key}:${value}`).join('\n')}\nEND:VCARD`;
 
-          // Générer le code QR avec les paramètres de personnalisation
           generateQRCode(qrContent, qrColor, qrBgColor, qrDotShape, qrCornerShape, logoFile, qrSize);
+
+          // Sauvegarde le nom de fichier à utiliser dans l'événement de téléchargement
+          document.getElementById('download-btn').dataset.filename = fileName;
         };
         reader.readAsText(vcfFile);
       }
@@ -182,12 +179,14 @@
 
     document.getElementById('download-btn').addEventListener('click', () => {
       const fileFormat = document.getElementById('file-format').value;
+      const fileName = document.getElementById('download-btn').dataset.filename;
+      
       qrCodeStyling.getRawData(fileFormat).then((data) => {
         const blob = new Blob([data], { type: fileFormat === 'png' ? 'image/png' : 'image/svg+xml' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `qrcode.${fileFormat}`;
+        a.download = `${fileName}.${fileFormat}`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
