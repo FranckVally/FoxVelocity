@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Générateur de codes QR</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.16/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/qr-code-styling/lib/qr-code-styling.js"></script>
+</head>
+<body class="bg-gray-100 p-8">
+  <div class="max-w-md mx-auto bg-white shadow-lg rounded-lg p-8">
+    <h1 class="text-2xl font-bold mb-4">Générateur de codes QR</h1>
+    <p class="mb-4">Téléchargez un fichier VCF pour générer un code QR personnalisé avec logo.</p>
+    
+    <div class="mb-4">
+      <label for="vcf-file" class="block font-medium text-gray-700 mb-2">Fichier VCF :</label>
+      <input type="file" id="vcf-file" class="border border-gray-300 rounded-md px-3 py-2 w-full" required>
+    </div>
+    
+    <div class="mb-4">
+      <label for="qr-color" class="block font-medium text-gray-700 mb-2">Couleur du code QR (hexadécimal) :</label>
+      <input type="text" id="qr-color" class="border border-gray-300 rounded-md px-3 py-2" value="#003150" placeholder="#003150">
+    </div>
+    
+    <div class="mb-4">
+      <label for="qr-bg-color" class="block font-medium text-gray-700 mb-2">Couleur de fond (hexadécimal) :</label>
+      <input type="text" id="qr-bg-color" class="border border-gray-300 rounded-md px-3 py-2" value="#ffffff" placeholder="#ffffff">
+    </div>
+    
+    <div class="mb-4">
+      <label for="qr-dot-shape" class="block font-medium text-gray-700 mb-2">Forme des petits points :</label>
+      <select id="qr-dot-shape" class="border border-gray-300 rounded-md px-3 py-2 w-full">
+        <option value="square">Carré</option>
+        <option value="dots">Circulaire</option>
+        <option value="rounded">Arrondi</option>
+        <option value="extra-rounded">Très arrondi</option>
+      </select>
+    </div>
+    
+    <div class="mb-4">
+      <label for="qr-corner-shape" class="block font-medium text-gray-700 mb-2">Forme des repères :</label>
+      <select id="qr-corner-shape" class="border border-gray-300 rounded-md px-3 py-2 w-full">
+        <option value="square">Carré</option>
+        <option value="dot">Circulaire</option>
+        <option value="rounded">Arrondi</option>
+      </select>
+    </div>
+
+    <div class="mb-4">
+      <label for="qr-size" class="block font-medium text-gray-700 mb-2">Taille du fichier de sortie :</label>
+      <select id="qr-size" class="border border-gray-300 rounded-md px-3 py-2 w-full">
+        <option value="300">300x300</option>
+        <option value="500">500x500</option>
+        <option value="800">800x800</option>
+      </select>
+    </div>
+    
+    <div class="mb-4">
+      <label for="file-format" class="block font-medium text-gray-700 mb-2">Format du fichier de sortie :</label>
+      <select id="file-format" class="border border-gray-300 rounded-md px-3 py-2 w-full">
+        <option value="png">PNG</option>
+        <option value="svg">SVG</option>
+      </select>
+    </div>
+
+    <div class="mb-4">
+      <label for="logo-file" class="block font-medium text-gray-700 mb-2">Logo (optionnel) :</label>
+      <input type="file" id="logo-file" class="border border-gray-300 rounded-md px-3 py-2 w-full">
+    </div>
+
+    <button id="generate-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md">
+      Générer le code QR
+    </button>
+
+    <div id="qr-code" class="mt-4 flex justify-center"></div>
+
+    <button id="download-btn" class="bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-md mt-4 hidden">
+      Télécharger le code QR
+    </button>
+  </div>
+
+  <script>
+    // Initialisation de l'objet QRCodeStyling
+    let qrCodeStyling = new QRCodeStyling({
+      width: 300,
+      height: 300,
+      margin: 10,
+      dotsOptions: {
+        color: "#000000",  // Couleur des points par défaut
+        type: "square"     // Forme des points par défaut
+      },
+      backgroundOptions: {
+        color: "#ffffff"   // Couleur de fond par défaut
+      },
+      cornersSquareOptions: {
+        type: "square"     // Forme des repères par défaut
+      }
+    });
+
+    function generateQRCode(qrContent, qrColor, qrBgColor, qrDotShape, qrCornerShape, logo, size) {
+      // Vérification si le code hexadécimal est valide
+      const isValidHex = (hex) => /^#([0-9A-F]{3}){1,2}$/i.test(hex);
+
+      if (!isValidHex(qrColor)) {
+        alert('Veuillez entrer un code hexadécimal valide pour la couleur du QR code.');
+        return;
+      }
+
+      if (!isValidHex(qrBgColor)) {
+        alert('Veuillez entrer un code hexadécimal valide pour la couleur de fond.');
+        return;
+      }
+
+      // Mise à jour de la taille du QR code
+      const qrSize = parseInt(size);
+
+      // Configuration des options QR Code
+      qrCodeStyling.update({
+        data: qrContent,
+        width: qrSize,  // Taille personnalisée
+        height: qrSize, // Taille personnalisée
+        dotsOptions: {
+          color: qrColor,  // Couleur personnalisée
+          type: qrDotShape   // Forme personnalisée des points
+        },
+        backgroundOptions: {
+          color: qrBgColor  // Couleur de fond personnalisée
+        },
+        cornersSquareOptions: {
+          type: qrCornerShape  // Personnalisation des repères
+        },
+        image: logo ? URL.createObjectURL(logo) : '',  // Logo optionnel
+        imageOptions: {
+          crossOrigin: 'anonymous',  // Important pour éviter des problèmes CORS
+          margin: 5,                 // Marge autour du logo
+          hideBackgroundDots: false, // Pour que le logo ne cache pas les points
+          imageSize: 0.30           // Taille du logo par rapport au QR code
+        }
+      });
+
+      // Affichage du code QR
+      const qrCodeElement = document.getElementById('qr-code');
+      qrCodeElement.innerHTML = '';
+      qrCodeStyling.append(qrCodeElement);
+
+      // Afficher le bouton de téléchargement
+      document.getElementById('download-btn').classList.remove('hidden');
+    }
+
+    document.getElementById('generate-btn').addEventListener('click', () => {
+      const vcfFile = document.getElementById('vcf-file').files[0];
+      const qrColor = document.getElementById('qr-color').value;
+      const qrBgColor = document.getElementById('qr-bg-color').value;
+      const qrDotShape = document.getElementById('qr-dot-shape').value;
+      const qrCornerShape = document.getElementById('qr-corner-shape').value;
+      const logoFile = document.getElementById('logo-file').files[0];
+      const qrSize = document.getElementById('qr-size').value;
+
+      if (vcfFile) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          // Extraire les informations du fichier VCF
+          const vcfData = reader.result.split('\n');
+          const vcfFields = {};
+
+          vcfData.forEach(line => {
+            const [key, ...value] = line.split(':');
+            if (key && value.length > 0) {
+              vcfFields[key] = value.join(':');
+            }
+          });
+
+          // Générer le contenu du code QR
+          const qrContent = `BEGIN:VCARD\nVERSION:3.0\n${Object.entries(vcfFields).map(([key, value]) => `${key}:${value}`).join('\n')}\nEND:VCARD`;
+
+          // Générer le code QR avec les paramètres de personnalisation
+          generateQRCode(qrContent, qrColor, qrBgColor, qrDotShape, qrCornerShape, logoFile, qrSize);
+        };
+        reader.readAsText(vcfFile);
+      }
+    });
+
+    document.getElementById('download-btn').addEventListener('click', () => {
+      const fileFormat = document.getElementById('file-format').value;
+      qrCodeStyling.getRawData(fileFormat).then((data) => {
+        const blob = new Blob([data], { type: fileFormat === 'png' ? 'image/png' : 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `qrcode.${fileFormat}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url); // Libérer l'URL de l'objet
+      });
+    });
+  </script>
+</body>
+</html>
