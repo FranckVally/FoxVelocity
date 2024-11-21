@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Évolution des Indices Boursiers et Épargne</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        select, input, button {
+            padding: 8px;
+            margin: 5px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #chartContainer, #investmentChartContainer {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        #loadingIndicator {
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+        #loadingIndicator .spinner {
+            margin-top: 10px;
+            border: 4px solid #ddd;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        #suggestions {
+            border: 1px solid #ddd;
+            max-height: 150px;
+            overflow-y: auto;
+            display: none;
+            background: white;
+            position: absolute;
+            z-index: 1000;
+            width: 90%;
+        }
+        #suggestions div {
+            padding: 5px;
+            cursor: pointer;
+        }
+        #suggestions div:hover {
+            background-color: #f0f0f0;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Évolution des Indices Boursiers et Simulation d'Épargne</h1>
+        
+        <div class="form-group">
+            <label for="searchInput">Recherchez une valeur :</label>
+            <input type="text" id="searchInput" placeholder="Entrez un symbole ou un nom d'entreprise">
+            <div id="suggestions"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="startDate">Date de début :</label>
+            <input type="date" id="startDate">
+            
+            <label for="endDate">Date de fin :</label>
+            <input type="date" id="endDate">
+            
+            <button onclick="fetchData()">Afficher l'évolution</button>
+        </div>
+
+        <div id="loadingIndicator">
+            <span>Chargement des données...</span>
+            <div class="spinner"></div>
+        </div>
+
+        <div id="chartContainer">
+            <canvas id="stockChart"></canvas>
+        </div>
+
+        <div class="form-group">
+            <label for="monthlyInvestment">Montant mensuel investi (€) :</label>
+            <input type="number" id="monthlyInvestment" value="100" step="10">
+        </div>
+
+        <div id="investmentChartContainer">
+            <canvas id="investmentChart"></canvas>
+        </div>
+
+        <div id="results">
+            <h2>Résultats</h2>
+            <p id="totalInvested">Total investi : -</p>
+            <p id="portfolioValue">Valeur du portefeuille : -</p>
+            <p id="gainLossPercentage">Gain/Perte (%) : -</p>
+            <p id="stockChangePercentage">Évolution de l'action (%) : -</p>
+        </div>
+    </div>
+
+    <script>
+        let stockChart = null;
+        let investmentChart = null;
+        let selectedSymbol = ""; // Stocke le symbole sélectionné
+
+        window.onload = function() {
+            const today = new Date();
+            const lastYear = new Date();
+            lastYear.setFullYear(today.getFullYear() - 1);
+            
+            document.getElementById('endDate').value = today.toISOString().split('T')[0];
+            document.getElementById('startDate').value = lastYear.toISOString().split('T')[0];
+        };
+
+        // Recherche dynamique avec suggestions
+        document.getElementById('searchInput').addEventListener('input', async function() {
+            const query = this.value.trim();
+
+            if (!query) {
+                document.getElementById('suggestions').style.display = 'none';
+                return;
+            }
+
+            const suggestionsContainer = document.getElementById('suggestions');
+            suggestionsContainer.innerHTML = "Chargement...";
+            suggestionsContainer.style.display = 'block';
+
+            try {
+                const url = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://query1.finance.yahoo.com/v1/finance/search?q=${query}`)}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                const results = JSON.parse(data.contents).quotes;
+
+                suggestionsContainer.innerHTML = results.map(result => 
+                    `<div onclick="selectSymbol('${result.symbol}')">
+                        ${result.shortname || result.symbol} (${result.symbol})
+                    </div>`
+                ).join('');
+
+                if (results.length === 0) {
+                    suggestionsContainer.innerHTML = "Aucun résultat trouvé.";
+                }
+            } catch (error) {
+                console.error("Erreur lors de la recherche : ", error);
+                suggestionsContainer.innerHTML = "Erreur lors de la recherche.";
+            }
+        });
+
+        // Fonction pour sélectionner un symbole
+        function selectSymbol(symbol) {
+            selectedSymbol = symbol;
+            document.getElementById('searchInput').value = symbol;
+            document.getElementById('suggestions').style.display = 'none';
+        }
+
+     async function fetchData() {
+    if (!selectedSymbol) {
+        alert("Veuillez rechercher et sélectionner une valeur avant de continuer.");
+        return;
+    }
+
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const startDate = new Date(document.getElementById('startDate').value).getTime() / 1000;
+    const endDate = new Date(document.getElementById('endDate').value).getTime() / 1000;
+    const monthlyInvestment = parseFloat(document.getElementById('monthlyInvestment').value) || 0;
+
+    const url = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${selectedSymbol}?period1=${startDate}&period2=${endDate}&interval=1d`)}`;
+
+    loadingIndicator.style.display = 'block';
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        const yahooData = JSON.parse(data.contents);
+
+        if (!yahooData.chart || !yahooData.chart.result) {
+            alert('Aucune donnée disponible pour cet indice.');
+            return;
+        }
+
+        const result = yahooData.chart.result[0];
+        const timestamps = result.timestamp;
+        const prices = result.indicators.quote[0].close;
+
+        let totalInvested = 0;
+        let totalShares = 0;
+
+        const chartData = {
+            labels: [],
+            prices: [],
+            investments: [],
+            portfolio: []
+        };
+
+        // Filtrer pour ne garder que les dates correspondant au premier jeudi de chaque mois
+        const filteredData = timestamps.map((ts, index) => ({
+            date: new Date(ts * 1000),
+            price: prices[index]
+        })).filter(data => {
+            const currentDate = data.date;
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth(); // Mois courant (0 = janvier)
+
+            const firstDayOfMonth = new Date(year, month, 1);
+            const firstThursday = new Date(firstDayOfMonth);
+
+            if (firstThursday.getDay() !== 4) { // 4 = Jeudi
+                const daysToAdd = (4 - firstThursday.getDay() + 7) % 7;
+                firstThursday.setDate(firstThursday.getDate() + daysToAdd);
+            }
+
+            return (
+                firstThursday.getMonth() === month &&
+                currentDate.toDateString() === firstThursday.toDateString()
+            );
+        });
+
+        // Calculer les données pour les graphiques
+        filteredData.forEach(data => {
+            const dateString = data.date.toISOString().split('T')[0];
+            chartData.labels.push(dateString);
+            chartData.prices.push(data.price);
+
+            totalInvested += monthlyInvestment;
+            const sharesBought = monthlyInvestment / data.price;
+            totalShares += sharesBought;
+
+            chartData.investments.push(totalInvested);
+            chartData.portfolio.push(totalShares * data.price);
+        });
+
+        const lastPrice = prices[prices.length - 1];
+        const gainLossPercentage = ((totalShares * lastPrice - totalInvested) / totalInvested) * 100;
+        const stockChangePercentage = ((lastPrice - prices[0]) / prices[0]) * 100;
+
+        document.getElementById('totalInvested').innerText = `Total investi : ${totalInvested.toFixed(2)} €`;
+        document.getElementById('portfolioValue').innerText = `Valeur du portefeuille : ${(totalShares * lastPrice).toFixed(2)} €`;
+        document.getElementById('gainLossPercentage').innerText = `Gain/Perte (%) : ${gainLossPercentage.toFixed(2)} %`;
+        document.getElementById('stockChangePercentage').innerText = `Évolution de l'action (%) : ${stockChangePercentage.toFixed(2)} %`;
+
+        updateCharts(chartData);
+    } catch (error) {
+        console.error('Erreur lors de la récupération des données :', error);
+        alert('Erreur lors de la récupération des données. Veuillez réessayer.');
+    } finally {
+        loadingIndicator.style.display = 'none';
+    }
+}
+
+
+
+
+
+        function updateCharts(data) {
+            const ctxStock = document.getElementById('stockChart').getContext('2d');
+            const ctxInvestment = document.getElementById('investmentChart').getContext('2d');
+
+            if (stockChart) stockChart.destroy();
+            if (investmentChart) investmentChart.destroy();
+
+            stockChart = new Chart(ctxStock, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Cours de clôture',
+                        data: data.prices,
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }]
+                }
+            });
+
+            investmentChart = new Chart(ctxInvestment, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        {
+                            label: 'Montant total investi (escalier)',
+                            data: data.investments,
+                            borderColor: 'rgb(255, 99, 132)',
+                            tension: 0,
+                            stepped: true
+                        },
+                        {
+                            label: 'Valeur du portefeuille',
+                            data: data.portfolio,
+                            borderColor: 'rgb(54, 162, 235)',
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Évolution de l’épargne et du portefeuille'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
