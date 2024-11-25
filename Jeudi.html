@@ -1,21 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Évolution des Indices Boursiers et Épargne</title>
+    <title>Évolution de la valeur de l'épargne sur support financier</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
-            background-color: #f5f5f5;
+            background-color: #121212;
+            color: #e0e0e0;
         }
         .container {
             max-width: 1000px;
             margin: 0 auto;
-            background-color: white;
+            background-color: #1e1e1e;
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
         .form-group {
             margin-bottom: 15px;
@@ -24,7 +25,9 @@
             padding: 8px;
             margin: 5px;
             border-radius: 4px;
-            border: 1px solid #ddd;
+            border: 1px solid #333;
+            background-color: #333;
+            color: #e0e0e0;
         }
         button {
             background-color: #007bff;
@@ -39,8 +42,9 @@
         #chartContainer, #investmentChartContainer {
             margin-top: 20px;
             padding: 10px;
-            border: 1px solid #ddd;
+            border: 1px solid #333;
             border-radius: 4px;
+            background-color: #1e1e1e;
         }
         #loadingIndicator {
             text-align: center;
@@ -49,7 +53,7 @@
         }
         #loadingIndicator .spinner {
             margin-top: 10px;
-            border: 4px solid #ddd;
+            border: 4px solid #333;
             border-top: 4px solid #007bff;
             border-radius: 50%;
             width: 30px;
@@ -57,11 +61,11 @@
             animation: spin 1s linear infinite;
         }
         #suggestions {
-            border: 1px solid #ddd;
+            border: 1px solid #333;
             max-height: 150px;
             overflow-y: auto;
             display: none;
-            background: white;
+            background: #1e1e1e;
             position: absolute;
             z-index: 1000;
             width: 90%;
@@ -71,31 +75,72 @@
             cursor: pointer;
         }
         #suggestions div:hover {
-            background-color: #f0f0f0;
+            background-color: #333;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .results h2 {
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+        .results p {
+            margin: 5px 0;
+        }
+        .results .final-results {
+            margin-top: 20px;
+            border-top: 2px solid #e0e0e0;
+            padding-top: 10px;
+        }
+        .stock-info {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background-color: #1e1e1e;
+        }
+        .stock-info h2 {
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+        .stock-info p {
+            margin: 5px 0;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Évolution des Indices Boursiers et Simulation d'Épargne</h1>
-        
+
         <div class="form-group">
             <label for="searchInput">Recherchez une valeur :</label>
             <input type="text" id="searchInput" placeholder="Entrez un symbole ou un nom d'entreprise">
             <div id="suggestions"></div>
         </div>
 
+        <!-- Ajout du conteneur pour la fiche d'information -->
+        <div id="stockInfo" class="stock-info" style="display: none;">
+            <h2>Informations sur l'action</h2>
+            <p><strong>Nom :</strong> <span id="stockName"></span></p>
+            <p><strong>Symbole :</strong> <span id="stockSymbol"></span></p>
+            <p><strong>Devise :</strong> <span id="stockCurrency"></span></p>
+            <p><strong>Place de Cotation :</strong> <span id="stockExchange"></span></p>
+            <p><strong>Type :</strong> <span id="stockType"></span></p>
+            <p><strong>Secteur :</strong> <span id="stockSector"></span></p>
+            <p><strong>Industrie :</strong> <span id="stockIndustry"></span></p>
+        </div>
+
         <div class="form-group">
             <label for="startDate">Date de début :</label>
             <input type="date" id="startDate">
-            
+
             <label for="endDate">Date de fin :</label>
             <input type="date" id="endDate">
-            
+
             <button onclick="fetchData()">Afficher l'évolution</button>
         </div>
 
@@ -117,12 +162,15 @@
             <canvas id="investmentChart"></canvas>
         </div>
 
-        <div id="results">
+        <div class="results" id="results">
             <h2>Résultats</h2>
-            <p id="totalInvested">Total investi : -</p>
-            <p id="portfolioValue">Valeur du portefeuille : -</p>
-            <p id="gainLossPercentage">Gain/Perte (%) : -</p>
-            <p id="stockChangePercentage">Évolution de l'action (%) : -</p>
+            <p id="finalTotalInvested">Total investi : -</p>
+            <p id="finalNumberOfPayments">Nombre de versements mensuels : -</p>
+            <p id="finalStockChangePercentage">Évolution de l'action : -</p>
+            <p id="finalPortfolioValue">Valeur finale du portefeuille : -</p>
+            <p id="finalGainLossPercentage">Gain/Perte : -</p>
+            <p id="finalMaxLossAmount">Montant de moins-value potentielle maximale : -</p>
+            <p id="finalMaxGainAmount">Montant de plus-value potentielle maximale : -</p>
         </div>
     </div>
 
@@ -130,12 +178,45 @@
         let stockChart = null;
         let investmentChart = null;
         let selectedSymbol = ""; // Stocke le symbole sélectionné
+        let currencySymbol = ""; // Stocke le symbole de la devise
+
+        const exchangeToCurrency = {
+            'NASDAQ': 'USD',
+            'NYSE': 'USD',
+            'AMEX': 'USD',
+            'NYQ': 'USD',
+            'NMS': 'USD', // NASDAQ
+            'PAR': 'EUR', // Euronext Paris
+            'FRA': 'EUR', // Euronext Paris
+            'GER': 'EUR', // Euronext Paris
+            'LSE': 'GBP', // London Stock Exchange
+            'TSE': 'JPY', // Tokyo Stock Exchange
+            'HKG': 'HKD', // Hong Kong Stock Exchange
+            'SSE': 'CNY', // Shanghai Stock Exchange
+            'SZSE': 'CNY', // Shenzhen Stock Exchange
+            'TSX': 'CAD', // Toronto Stock Exchange
+            'ASX': 'AUD', // Australian Securities Exchange
+            'BSE': 'INR', // Bombay Stock Exchange
+            'NSE': 'INR'  // National Stock Exchange of India
+        };
+
+        const currencySymbols = {
+            'USD': '$',
+            'EUR': '€',
+            'GBP': '£',
+            'JPY': '¥',
+            'HKD': 'HK$',
+            'CNY': 'CN¥',
+            'CAD': 'C$',
+            'AUD': 'A$',
+            'INR': '₹'
+        };
 
         window.onload = function() {
             const today = new Date();
             const lastYear = new Date();
             lastYear.setFullYear(today.getFullYear() - 1);
-            
+
             document.getElementById('endDate').value = today.toISOString().split('T')[0];
             document.getElementById('startDate').value = lastYear.toISOString().split('T')[0];
         };
@@ -159,8 +240,8 @@
                 const data = await response.json();
                 const results = JSON.parse(data.contents).quotes;
 
-                suggestionsContainer.innerHTML = results.map(result => 
-                    `<div onclick="selectSymbol('${result.symbol}')">
+                suggestionsContainer.innerHTML = results.map(result =>
+                    `<div onclick="selectSymbol('${result.symbol}', '${result.longname}', '${result.exchange}', '${result.quoteType}', '${result.sector}', '${result.industry}')">
                         ${result.shortname || result.symbol} (${result.symbol})
                     </div>`
                 ).join('');
@@ -175,109 +256,165 @@
         });
 
         // Fonction pour sélectionner un symbole
-        function selectSymbol(symbol) {
+        function selectSymbol(symbol, name, exchange, type, sector, industry) {
             selectedSymbol = symbol;
             document.getElementById('searchInput').value = symbol;
             document.getElementById('suggestions').style.display = 'none';
+
+            // Déduire la devise en fonction de la place de cotation
+            const currency = exchangeToCurrency[exchange] || 'N/A';
+            currencySymbol = currencySymbols[currency] || currency;
+
+            // Afficher les informations de l'action
+            document.getElementById('stockName').innerText = name;
+            document.getElementById('stockSymbol').innerText = symbol;
+            document.getElementById('stockExchange').innerText = exchange;
+            document.getElementById('stockCurrency').innerText = currencySymbol;
+            document.getElementById('stockType').innerText = type;
+            document.getElementById('stockSector').innerText = sector;
+            document.getElementById('stockIndustry').innerText = industry;
+            document.getElementById('stockInfo').style.display = 'block';
         }
 
-     async function fetchData() {
-    if (!selectedSymbol) {
-        alert("Veuillez rechercher et sélectionner une valeur avant de continuer.");
-        return;
-    }
+        async function fetchData() {
+            if (!selectedSymbol) {
+                alert("Veuillez rechercher et sélectionner une valeur avant de continuer.");
+                return;
+            }
 
-    const loadingIndicator = document.getElementById('loadingIndicator');
-    const startDate = new Date(document.getElementById('startDate').value).getTime() / 1000;
-    const endDate = new Date(document.getElementById('endDate').value).getTime() / 1000;
-    const monthlyInvestment = parseFloat(document.getElementById('monthlyInvestment').value) || 0;
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const startDate = new Date(document.getElementById('startDate').value).getTime() / 1000;
+            const endDate = new Date(document.getElementById('endDate').value).getTime() / 1000;
+            const monthlyInvestment = parseFloat(document.getElementById('monthlyInvestment').value) || 0;
 
-    const url = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${selectedSymbol}?period1=${startDate}&period2=${endDate}&interval=1d`)}`;
-
-    loadingIndicator.style.display = 'block';
-
-    try {
-        const response = await fetch(url);
-        const data = await response.json();
-        const yahooData = JSON.parse(data.contents);
-
-        if (!yahooData.chart || !yahooData.chart.result) {
-            alert('Aucune donnée disponible pour cet indice.');
-            return;
-        }
-
-        const result = yahooData.chart.result[0];
-        const timestamps = result.timestamp;
-        const prices = result.indicators.quote[0].close;
-
-        let totalInvested = 0;
-        let totalShares = 0;
-
-        const chartData = {
-            labels: [],
-            prices: [],
-            investments: [],
-            portfolio: []
-        };
-
-        // Filtrer pour ne garder que les dates correspondant au premier jeudi de chaque mois
-        const filteredData = timestamps.map((ts, index) => ({
-            date: new Date(ts * 1000),
-            price: prices[index]
-        })).filter(data => {
-            const currentDate = data.date;
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth(); // Mois courant (0 = janvier)
-
-            const firstDayOfMonth = new Date(year, month, 1);
-            const firstThursday = new Date(firstDayOfMonth);
+            // Calculer le premier jeudi du dernier mois choisi
+            const endDateObj = new Date(endDate * 1000);
+            const firstDayOfLastMonth = new Date(endDateObj.getFullYear(), endDateObj.getMonth(), 1);
+            const firstThursday = new Date(firstDayOfLastMonth);
 
             if (firstThursday.getDay() !== 4) { // 4 = Jeudi
                 const daysToAdd = (4 - firstThursday.getDay() + 7) % 7;
                 firstThursday.setDate(firstThursday.getDate() + daysToAdd);
             }
 
-            return (
-                firstThursday.getMonth() === month &&
-                currentDate.toDateString() === firstThursday.toDateString()
-            );
-        });
+            const firstThursdayTimestamp = firstThursday.getTime() / 1000;
 
-        // Calculer les données pour les graphiques
-        filteredData.forEach(data => {
-            const dateString = data.date.toISOString().split('T')[0];
-            chartData.labels.push(dateString);
-            chartData.prices.push(data.price);
+            const url = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${selectedSymbol}?period1=${startDate}&period2=${firstThursdayTimestamp}&interval=1d`)}`;
 
-            totalInvested += monthlyInvestment;
-            const sharesBought = monthlyInvestment / data.price;
-            totalShares += sharesBought;
+            loadingIndicator.style.display = 'block';
 
-            chartData.investments.push(totalInvested);
-            chartData.portfolio.push(totalShares * data.price);
-        });
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                const yahooData = JSON.parse(data.contents);
 
-        const lastPrice = prices[prices.length - 1];
-        const gainLossPercentage = ((totalShares * lastPrice - totalInvested) / totalInvested) * 100;
-        const stockChangePercentage = ((lastPrice - prices[0]) / prices[0]) * 100;
+                if (!yahooData.chart || !yahooData.chart.result) {
+                    alert('Aucune donnée disponible pour cet indice.');
+                    return;
+                }
 
-        document.getElementById('totalInvested').innerText = `Total investi : ${totalInvested.toFixed(2)} €`;
-        document.getElementById('portfolioValue').innerText = `Valeur du portefeuille : ${(totalShares * lastPrice).toFixed(2)} €`;
-        document.getElementById('gainLossPercentage').innerText = `Gain/Perte (%) : ${gainLossPercentage.toFixed(2)} %`;
-        document.getElementById('stockChangePercentage').innerText = `Évolution de l'action (%) : ${stockChangePercentage.toFixed(2)} %`;
+                const result = yahooData.chart.result[0];
+                const timestamps = result.timestamp;
+                const prices = result.indicators.quote[0].close;
 
-        updateCharts(chartData);
-    } catch (error) {
-        console.error('Erreur lors de la récupération des données :', error);
-        alert('Erreur lors de la récupération des données. Veuillez réessayer.');
-    } finally {
-        loadingIndicator.style.display = 'none';
-    }
-}
+                let totalInvested = 0;
+                let totalShares = 0;
+                let numberOfPayments = 0;
+                let maxLossAmount = 0;
+                let maxLossPercentage = 0;
+                let maxGainAmount = 0;
+                let maxGainPercentage = 0;
+                let maxLossDate = '';
+                let maxGainDate = '';
 
+                const chartData = {
+                    labels: [],
+                    prices: [],
+                    investments: [],
+                    portfolio: []
+                };
 
+                // Filtrer pour ne garder que les dates correspondant au premier jeudi de chaque mois
+                const filteredData = [];
+                const firstThursdays = new Set();
 
+                for (let i = 0; i < timestamps.length; i++) {
+                    const currentDate = new Date(timestamps[i] * 1000);
+                    const year = currentDate.getFullYear();
+                    const month = currentDate.getMonth(); // Mois courant (0 = janvier)
 
+                    const firstDayOfMonth = new Date(year, month, 1);
+                    const firstThursday = new Date(firstDayOfMonth);
+
+                    if (firstThursday.getDay() !== 4) { // 4 = Jeudi
+                        const daysToAdd = (4 - firstThursday.getDay() + 7) % 7;
+                        firstThursday.setDate(firstThursday.getDate() + daysToAdd);
+                    }
+
+                    if (firstThursday.getMonth() === month && currentDate.toDateString() === firstThursday.toDateString()) {
+                        if (!firstThursdays.has(firstThursday.toDateString())) {
+                            filteredData.push({ date: currentDate, price: prices[i] });
+                            firstThursdays.add(firstThursday.toDateString());
+                        }
+                    }
+                }
+
+                // Calculer les données pour les graphiques
+                filteredData.forEach((data, index) => {
+                    const dateString = data.date.toISOString().split('T')[0];
+                    chartData.labels.push(dateString);
+                    chartData.prices.push(data.price);
+
+                    if (index < filteredData.length - 1) {
+                        totalInvested += monthlyInvestment;
+                        const sharesBought = monthlyInvestment / data.price;
+                        totalShares += sharesBought;
+                        numberOfPayments++;
+                    }
+
+                    chartData.investments.push(totalInvested);
+                    chartData.portfolio.push(totalShares * data.price);
+
+                    // Calculer la moins-value et la plus-value potentielles
+                    const currentLossAmount = totalInvested - (totalShares * data.price);
+                    const currentLossPercentage = (currentLossAmount / totalInvested) * 100;
+                    const currentGainAmount = (totalShares * data.price) - totalInvested;
+                    const currentGainPercentage = (currentGainAmount / totalInvested) * 100;
+
+                    if (currentLossAmount > maxLossAmount) {
+                        maxLossAmount = currentLossAmount;
+                        maxLossPercentage = currentLossPercentage;
+                        maxLossDate = dateString;
+                    }
+
+                    if (currentGainAmount > maxGainAmount) {
+                        maxGainAmount = currentGainAmount;
+                        maxGainPercentage = currentGainPercentage;
+                        maxGainDate = dateString;
+                    }
+                });
+
+                const lastPrice = prices[prices.length - 1];
+                const gainLossPercentage = ((totalShares * lastPrice - totalInvested) / totalInvested) * 100;
+                const gainLossAmount = (totalShares * lastPrice - totalInvested);
+                const stockChangePercentage = ((lastPrice - prices[0]) / prices[0]) * 100;
+
+                document.getElementById('finalTotalInvested').innerHTML = `Total investi : <span style="color: ${gainLossPercentage >= 0 ? 'green' : 'red'}">${totalInvested.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} ${currencySymbol}</span>`;
+                document.getElementById('finalNumberOfPayments').innerHTML = `Nombre de versements mensuels : ${numberOfPayments} mois soit ${Math.floor(numberOfPayments / 12)} ans et ${numberOfPayments % 12} mois`;
+                document.getElementById('finalStockChangePercentage').innerHTML = `Évolution de l'action :  <span style="color: ${stockChangePercentage >= 0 ? 'green' : 'red'}">${stockChangePercentage.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} %</span>`;
+                document.getElementById('finalPortfolioValue').innerHTML = `Valeur finale du portefeuille : <span style="color: ${gainLossPercentage >= 0 ? 'green' : 'red'}">${(totalShares * lastPrice).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} ${currencySymbol}</span> au ${firstThursday.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+                document.getElementById('finalGainLossPercentage').innerHTML = `Gain/Perte : <span style="color: ${gainLossPercentage >= 0 ? 'green' : 'red'}">${gainLossPercentage.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} %</span> au ${firstThursday.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} soit <span style="color: ${gainLossAmount >= 0 ? 'green' : 'red'}">${gainLossAmount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} ${currencySymbol}</span>`;
+                document.getElementById('finalMaxLossAmount').innerHTML = `Montant de moins-value potentielle maximale : <span style="color: red;">-${Math.abs(maxLossAmount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} ${currencySymbol}</span> soit : <span style="color: red;">-${Math.abs(maxLossPercentage).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} %</span> de l'investissement au : ${new Date(maxLossDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+                document.getElementById('finalMaxGainAmount').innerHTML = `Montant de plus-value potentielle maximale : <span style="color: green;">${maxGainAmount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} ${currencySymbol}</span> soit : <span style="color: green;">${maxGainPercentage.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} %</span> de l'investissement au : ${new Date(maxGainDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+
+                updateCharts(chartData);
+            } catch (error) {
+                console.error('Erreur lors de la récupération des données :', error);
+                alert('Erreur lors de la récupération des données. Veuillez réessayer.');
+            } finally {
+                loadingIndicator.style.display = 'none';
+            }
+        }
 
         function updateCharts(data) {
             const ctxStock = document.getElementById('stockChart').getContext('2d');
@@ -286,6 +423,7 @@
             if (stockChart) stockChart.destroy();
             if (investmentChart) investmentChart.destroy();
 
+            // Graphique de l'évolution de l'action
             stockChart = new Chart(ctxStock, {
                 type: 'line',
                 data: {
@@ -296,26 +434,54 @@
                         borderColor: 'rgb(75, 192, 192)',
                         tension: 0.1
                     }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Évolution de l’action'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                color: 'white'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: 'white'
+                            }
+                        }
+                    }
                 }
             });
 
+            // Graphique de l'évolution du montant investi et de la valeur obtenue
             investmentChart = new Chart(ctxInvestment, {
-                type: 'line',
+                type: 'bar',
                 data: {
                     labels: data.labels,
                     datasets: [
                         {
-                            label: 'Montant total investi (escalier)',
-                            data: data.investments,
-                            borderColor: 'rgb(255, 99, 132)',
-                            tension: 0,
-                            stepped: true
-                        },
-                        {
                             label: 'Valeur du portefeuille',
                             data: data.portfolio,
+                            type: 'line',
                             borderColor: 'rgb(54, 162, 235)',
-                            tension: 0.1
+                            tension: 0.1,
+                            yAxisID: 'y',
+                            order: 1
+                        },
+                        {
+                            label: 'Montant total investi',
+                            data: data.investments,
+                            backgroundColor: 'rgb(255, 99, 132)',
+                            borderColor: 'rgb(255, 99, 132)',
+                            borderWidth: 1,
+                            yAxisID: 'y',
+                            order: 2
                         }
                     ]
                 },
@@ -325,11 +491,34 @@
                         title: {
                             display: true,
                             text: 'Évolution de l’épargne et du portefeuille'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const value = context.raw;
+                                    const lastValue = context.dataset.data[context.dataset.data.length - 1];
+                                    if (label === 'Valeur du portefeuille' && context.dataIndex === context.dataset.data.length - 1) {
+                                        return `${label}: ${value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} ${currencySymbol} (Dernière valeur: ${lastValue.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} ${currencySymbol})`;
+                                    }
+                                    return `${label}: ${value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} ${currencySymbol}`;
+                                }
+                            }
                         }
                     },
                     scales: {
                         y: {
-                            beginAtZero: true
+                            type: 'linear',
+                            position: 'left',
+                            beginAtZero: true,
+                            ticks: {
+                                color: 'white'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: 'white'
+                            }
                         }
                     }
                 }
